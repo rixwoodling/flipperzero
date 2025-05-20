@@ -1,0 +1,8 @@
+app:
+  name: Hello World
+  entry_point: hello_world_app
+  icon: Hello
+  version: "1.0.0"
+  category: debug
+  author: rix
+  description: A simple hello world test app.
