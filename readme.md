@@ -17,5 +17,5 @@ kill -9 1924437
 minicom -b 115200 -D /dev/ttyACM0
 CTRL-A Z Q
 ```
-lab.flipper.net #chromebrowser webusb
+lab.flipper.net #chromebrowser webusb   
 https://forum.flipper.net/t/cli-command-line-interface-examples/1874/2
