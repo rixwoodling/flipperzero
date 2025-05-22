@@ -33,6 +33,11 @@ screen /dev/cu.usbmodemflip_Poanmur1
 ./fbt fap_skeleton
 ./fbt launch APPSRC=applications_user/skeleton
 ```
+
+```
+rm -rf ./build/f7-firmware-D/.extapps/skeleton/
+./fbt flash_usb
+```
 <sup>https://developer.flipper.net/flipperzero/doxygen/apps_on_sd_card.html</sup>
 
 
