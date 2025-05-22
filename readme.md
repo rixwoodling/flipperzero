@@ -17,5 +17,13 @@ kill -9 1924437
 minicom -b 115200 -D /dev/ttyACM0
 CTRL-A Z Q
 ```
+MacOS
+```
+ls /dev/cu.usbmodemflip_Poanmur1
+```
+```
+screen /dev/cu.usbmodemflip_Poanmur1
+```
+
 lab.flipper.net #chromebrowser webusb   
 https://forum.flipper.net/t/cli-command-line-interface-examples/1874/2
