@@ -30,7 +30,7 @@ screen /dev/cu.usbmodemflip_Poanmur1
 ```
 ./fbt
 ./fbt fap_skeleton
-./fbt flash_usb
+./fbt launch APPSRC=applications_user/skeleton
 ```
 
 
