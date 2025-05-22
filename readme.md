@@ -35,7 +35,7 @@ screen /dev/cu.usbmodemflip_Poanmur1
 ```
 
 ```
-rm -rf ./build/f7-firmware-D/.extapps/skeleton/
+rm -rf ./build/f7-firmware-D/.extapps/skeleton*
 ./fbt flash_usb
 ```
 <sup>https://developer.flipper.net/flipperzero/doxygen/apps_on_sd_card.html</sup>
