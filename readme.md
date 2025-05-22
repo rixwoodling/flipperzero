@@ -27,5 +27,12 @@ ls /dev/cu.usbmodemflip_Poanmur1
 screen /dev/cu.usbmodemflip_Poanmur1
 ```
 
+```
+./fbt
+./fbt fap_skeleton
+./fbt flash_usb
+```
+
+
 lab.flipper.net #chromebrowser webusb   
 https://forum.flipper.net/t/cli-command-line-interface-examples/1874/2
