@@ -49,7 +49,13 @@ https://forum.flipper.net/t/cli-command-line-interface-examples/1874/2
 brew install avrdude
 ```
 ```
+ls /dev/tty.*
+```
+```
 avrdude -c arduino -P /dev/tty.usbmodemflip_Poanmur3 -b 19200 -p attiny85 -U flash:r:dump.hex:i
+```
+```
+xxd dump.hex | less
 ```
 ```
 avrdude -c arduino -P /dev/tty.usbmodemflip_Poanmur3 -b 19200 -p attiny85 -U flash:w:dump.hex:i
