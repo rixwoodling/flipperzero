@@ -44,3 +44,12 @@ rm -rf ./build/f7-firmware-D/.extapps/skeleton*
 
 lab.flipper.net #chromebrowser webusb   
 https://forum.flipper.net/t/cli-command-line-interface-examples/1874/2
+
+```
+brew install avrdude
+```
+```
+avrdude -c arduino -P /dev/tty.usbmodemflip_Poanmur3 -b 19200 -p attiny85 -U flash:r:dump.hex:i
+```
+
+
