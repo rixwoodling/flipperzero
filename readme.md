@@ -21,12 +21,16 @@ CTRL-A Z Q
 ```
 MacOS
 ```
-ls /dev/cu.usbmodemflip_Poanmur1
+ls /dev/cu.*
 ```
 ```
 screen /dev/cu.usbmodemflip_Poanmur1
 ```
 
+clone and update flipper
+```
+git clone https://github.com/flipperdevices/flipperzero-firmware.git ~/git
+```
 ```
 ./fbt
 ./fbt flash_usb
