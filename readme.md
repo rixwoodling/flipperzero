@@ -13,12 +13,8 @@ newgrp dialout
 screen /dev/ttyACM0 115200
 # Ctrl + A → then K → then Y
 ```
-><sup> kill with `lsof /dev/ttyACM0` then `kill -9 1924437` </sup>  
+<sup> kill with `lsof /dev/ttyACM0` then `kill -9 1924437` </sup>  
 
-```
-minicom -b 115200 -D /dev/ttyACM0
-CTRL-A Z Q
-```
 MacOS
 ```
 ls /dev/cu.*
