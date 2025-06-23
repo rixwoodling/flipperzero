@@ -54,8 +54,8 @@ git branch -r
 git checkout -b release origin/release
 ```
 ```
-./fbt
-./fbt flash_usb
+./fbt # build firmware
+./fbt flash_usb # flash firmware through usb
 ./fbt fap_skeleton
 ./fbt launch APPSRC=applications_user/skeleton
 ```
