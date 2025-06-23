@@ -33,7 +33,7 @@ newgrp dialout
 ```
 screen /dev/ttyACM0 115200
 # Ctrl + A → then K → then Y
-Ctrl + A → :kill
+# Ctrl + A → :kill
 ```
 <sup> kill with `lsof /dev/ttyACM0` then `kill -9 1924437` </sup>  
 
