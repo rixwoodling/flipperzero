@@ -1,8 +1,23 @@
-app:
-  name: Hello World
-  entry_point: hello_world_app
-  icon: Hello
-  version: "1.0.0"
-  category: debug
-  author: rix
-  description: A simple hello world test app.
+# COMPILE ISTRUCTIONS:
+
+# Clean the code and remove old binaries/compilation artefact 
+# ./fbt -c fap_my_first_app
+
+# Compile FAP
+# ./fbt fap_my_first_app
+
+# Run application directly inside the Flip.x0
+# ./fbt launch_app APPSRC=my_first_app
+
+App(
+    # Foldername of the application
+    appid="hello_world",
+    # name will be show on the Flip.x0 browser
+    name="Hello World",
+    apptype=FlipperAppType.EXTERNAL,
+    # Main function (entry point) of the application  
+    entry_point="hello_world_main",
+    stack_size=1 * 1024,
+    # Where the application will be stored into the Flip.x0
+    fap_category="Examples",
+)
