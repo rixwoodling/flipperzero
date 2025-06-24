@@ -56,6 +56,7 @@ git checkout -b release origin/release
 ./fbt # build firmware
 ./fbt flash_usb # flash firmware through usb
 ./fbt fap_skeleton
+./fbt -c fap_skeleton
 ./fbt launch APPSRC=applications_user/skeleton
 ```
 
