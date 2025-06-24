@@ -7,9 +7,6 @@ static void draw_callback(Canvas* canvas, void* ctx) {
     canvas_clear(canvas);
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str(canvas, 32, 13, "Hello World!");
-    canvas_set_font(canvas, FontSecondary);
-    canvas_draw_str(canvas, 15, 40, " press back to exit FAP");
-    canvas_draw_line(canvas, 2, 23, 126, 23);
 }
 static void input_callback(InputEvent* input_event, void* ctx) {
     furi_assert(ctx);
