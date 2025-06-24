@@ -1,13 +1,13 @@
 # COMPILE ISTRUCTIONS:
 
 # Clean the code and remove old binaries/compilation artefact 
-# ./fbt -c fap_my_first_app
+# ./fbt -c hello_world
 
 # Compile FAP
-# ./fbt fap_my_first_app
+# ./fbt fap_hello_world
 
 # Run application directly inside the Flip.x0
-# ./fbt launch_app APPSRC=my_first_app
+# ./fbt launch_app APPSRC=hello_world
 
 App(
     # Foldername of the application
