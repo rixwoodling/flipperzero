@@ -1,26 +1,39 @@
+#include <stdio.h>
 #include <furi.h>
 #include <gui/gui.h>
 
-static void hello_world_draw_callback(Canvas* canvas, void* ctx) {
+static void draw_callback(Canvas* canvas, void* ctx) {
     UNUSED(ctx);
     canvas_clear(canvas);
     canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str(canvas, 5, 20, "Hello, Flipper!");
+    canvas_draw_str(canvas, 32, 13, "Hello World!");
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_str(canvas, 15, 40, " press back to exit FAP");
+    canvas_draw_line(canvas, 2, 23, 126, 23);
 }
-
-int32_t hello_world_app(void* p) {
+static void input_callback(InputEvent* input_event, void* ctx) {
+    furi_assert(ctx);
+    FuriMessageQueue* event_queue = ctx;
+    furi_message_queue_put(event_queue, input_event, FuriWaitForever);
+}
+int32_t hello_world_main(void* p) {
     UNUSED(p);
-    Gui* gui = furi_record_open(RECORD_GUI);
+    InputEvent event;
+    FuriMessageQueue* event_queue = furi_message_queue_alloc(8, sizeof(InputEvent));
     ViewPort* view_port = view_port_alloc();
-
-    view_port_draw_callback_set(view_port, hello_world_draw_callback, NULL);
+    view_port_draw_callback_set(view_port, draw_callback, NULL);
+    view_port_input_callback_set(view_port, input_callback, event_queue);
+    Gui* gui = furi_record_open(RECORD_GUI);
     gui_add_view_port(gui, view_port, GuiLayerFullscreen);
-
-    furi_delay_ms(3000);
-
+    while(true) {
+        furi_check(furi_message_queue_get(event_queue, &event, FuriWaitForever) == FuriStatusOk);
+        if(event.key == InputKeyBack) {
+            break;
+        }
+    }
+    furi_message_queue_free(event_queue);
     gui_remove_view_port(gui, view_port);
     view_port_free(view_port);
     furi_record_close(RECORD_GUI);
-
     return 0;
 }
