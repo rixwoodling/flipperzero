@@ -6,7 +6,7 @@ static void draw_callback(Canvas* canvas, void* ctx) {
     UNUSED(ctx);
     canvas_clear(canvas);
     canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str(canvas, 32, 13, "Hello World!");
+    canvas_draw_str(canvas, 32, 40, "Hello World!");
 }
 static void input_callback(InputEvent* input_event, void* ctx) {
     furi_assert(ctx);
