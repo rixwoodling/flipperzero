@@ -48,7 +48,6 @@ screen /dev/cu.usbmodemflip_Poanmur1
 clone and update flipper
 ```
 git clone https://github.com/flipperdevices/flipperzero-firmware.git
-git clone --depth=1 https://github.com/flipperdevices/flipperzero-firmware.git
 git fetch --all
 git branch -r
 git checkout -b release origin/release
