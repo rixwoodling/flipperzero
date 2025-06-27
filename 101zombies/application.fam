@@ -2,7 +2,7 @@ App(
     # Foldername of the application
     appid="101_zombies",
     # name will be show on the Flip.x0 browser
-    name="101 Zombies",
+    name="101 Zombies!",
     apptype=FlipperAppType.EXTERNAL,
     # Main function (entry point) of the application  
     entry_point="zombies_main",
