@@ -1,4 +1,3 @@
-  GNU nano 7.2                                                          101zombies.c                                                                    
 #include <stdio.h>
 #include <furi.h>
 #include <gui/gui.h>
