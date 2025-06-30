@@ -5,18 +5,15 @@
 typedef enum {
     StateTitle,
     StateRules,
-//    StateMainGame,
-//    StateBackMenu,
-//    StateGameOver,
-    StateConfirmExit,
+    StateGame,
+    StateQuitMenu,
 } GameState;
 
 typedef struct {
     GameState screen;
-    uint8_t selection;
+    GameState prev_screen;
+    uint8_t quit_selected;
 } AppState;
-
-
 
 static void draw_callback(Canvas* canvas, void* ctx) {
     furi_assert(ctx);
@@ -42,17 +39,16 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             canvas_draw_str(canvas, 1, 50, "for weak little girls!");
             canvas_draw_str(canvas, 1, 60, "Good luck.");
             break;
-        case StateConfirmExit:
-            canvas_set_font(canvas, FontSecondary);
-            canvas_draw_str(canvas, 10, 10, "Give up?");
-
-            if(state->selection == 0) {
-                canvas_draw_str(canvas, 10, 30, "> No");
-                canvas_draw_str(canvas, 10, 40, "  Yes, I'm scared.");
-            } else {
-                canvas_draw_str(canvas, 10, 30, "  No");
-                canvas_draw_str(canvas, 10, 40, "> Yes, I'm scared.");
-            }
+        case StateQuitMenu:
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(canvas, 20, 25, "Give up already?");
+            canvas_set_font(canvas, FontKeyboard);
+            canvas_draw_str(canvas, 20, 45, state->quit_selected ? "> Yes" : "  Yes");
+            canvas_draw_str(canvas, 70, 45, !state->quit_selected ? "> No" : "  No");
+            break;
+        case StateGame:
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(canvas, 32, 15, "You Lose!");
             break;
     }
 }
@@ -81,36 +77,51 @@ int32_t zombies_main(void* p) {
         furi_check(furi_message_queue_get(event_queue, &event, FuriWaitForever) == FuriStatusOk);
 
         if(event.key == InputKeyBack) {
-            app_state.screen == StateConfirmExit; //
-            app_state.selection = 0;              //
-            view_port_update(view_port);          //
-            continue;                             //
-        }
-
-        if(event.key == InputKeyOk) {
-            switch(app_state.screen) {
-                case StateTitle:
-                    app_state.screen = StateRules;
-                    break;
-                case StateRules:
-                    app_state.screen = StateTitle;
-                    break;
-                case StateConfirmExit:
-                    if(event.key == InputKeyUp || event.key == InputKeyDown) {
-                        app_state.selection ^= 1;
-                    } else {
-                        if(app_state.selection == 0) {
-                            app_state.screen = StateTitle;
-                        } else {
-                            break;
-                        }
-                    }
-                    view_port_update(view_port);
-                    break;
-                default:
-                    break;
+            if(app_state.screen != StateQuitMenu) {
+                app_state.prev_screen = app_state.screen;
+                app_state.screen = StateQuitMenu;
+                view_port_update(view_port);
+            } else {
+                app_state.screen = app_state.prev_screen;
+                view_port_update(view_port);
             }
-            view_port_update(view_port);
+        } else if(app_state.screen == StateQuitMenu) {
+            if(event.key == InputKeyLeft || event.key == InputKeyRight) {
+                app_state.quit_selected = !app_state.quit_selected;
+                view_port_update(view_port);
+            } else if(event.type == InputTypeShort && event.key == InputKeyOk) {
+                if(app_state.quit_selected) {
+                    break;
+                } else {
+                    app_state.screen = app_state.prev_screen;
+                    view_port_update(view_port);
+                    continue;
+                }
+            }
+        } else if(event.type == InputTypeShort && event.key == InputKeyOk) {
+            if(app_state.screen == StateTitle) {
+                app_state.screen = StateRules;
+                view_port_update(view_port);
+                continue;
+            } else if(app_state.screen == StateRules) {
+                app_state.screen = StateGame;
+                view_port_update(view_port);
+                continue;
+            }
+        } else if(app_state.screen == StateGame && event.type == InputTypeShort) {
+            if(event.key == InputKeyLeft) {
+                // Run logic
+                // e.g., app_state.message = "You ran!";
+                app_state.screen = StateTitle;
+                view_port_update(view_port);
+                continue;
+            } else if(event.key == InputKeyRight) {
+                // Fight logic
+                // e.g., app_state.message = "You fought!";
+                app_state.screen = StateTitle;
+                view_port_update(view_port);
+                continue;
+            }
         }
     }
 
