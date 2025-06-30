@@ -13,6 +13,13 @@ typedef struct {
     GameState screen;
     GameState prev_screen;
     uint8_t quit_selected;
+
+    // Gameplay fields
+    int health;
+    int horde;
+    int weapon;
+    int fatigue;
+    int zombies;
 } AppState;
 
 static void draw_callback(Canvas* canvas, void* ctx) {
