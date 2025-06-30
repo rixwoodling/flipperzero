@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <furi.h>
 #include <gui/gui.h>
+#include <stdlib.h> 
 
 typedef enum {
     StateTitle,
@@ -14,12 +15,8 @@ typedef struct {
     GameState prev_screen;
     uint8_t quit_selected;
 
-    // Gameplay fields
-    int health;
-    int horde;
-    int weapon;
-    int fatigue;
-    int zombies;
+    int zombies; //
+    char message[64]; //
 } AppState;
 
 static void draw_callback(Canvas* canvas, void* ctx) {
@@ -55,7 +52,13 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             break;
         case StateGame:
             canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str(canvas, 32, 15, "You Lose!");
+            canvas_draw_str(canvas, 10, 15, "Zombies incoming!");
+            canvas_set_font(canvas, FontSecondary); //
+
+            char buf[32]; //
+            snprintf(buf, sizeof(buf), "Zombies: %d", state->zombies); //
+            canvas_draw_str(canvas, 10, 35, buf); //
+            canvas_draw_str(canvas, 10, 55, state->message); //
             break;
     }
 }
@@ -116,19 +119,14 @@ int32_t zombies_main(void* p) {
                 continue;
             }
         } else if(app_state.screen == StateGame && event.type == InputTypeShort) {
-            if(event.key == InputKeyLeft) {
-                // Run logic
-                // e.g., app_state.message = "You ran!";
-                app_state.screen = StateTitle;
-                view_port_update(view_port);
-                continue;
-            } else if(event.key == InputKeyRight) {
-                // Fight logic
-                // e.g., app_state.message = "You fought!";
-                app_state.screen = StateTitle;
-                view_port_update(view_port);
-                continue;
+            app_state.zombies = rand() % 10 + 1;
+
+            if(event.key == InputKeyRight) {
+                snprintf(app_state.message, sizeof(app_state.message), "You fought!");
+            } else if(event.key == InputKeyLeft) {
+                snprintf(app_state.message, sizeof(app_state.message), "You ran away!");
             }
+            view_port_update(view_port);
         }
     }
 
