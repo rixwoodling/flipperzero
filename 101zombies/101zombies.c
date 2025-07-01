@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <furi.h>
 #include <gui/gui.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 
 typedef enum {
     StateTitle,
@@ -17,7 +17,7 @@ typedef struct {
     uint8_t yesno_selected;
 
     int zombies;
-    int remaining; 
+    int remaining;
     int health;
     int weapon;
     int fatigue;
@@ -73,6 +73,13 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             canvas_draw_str(canvas, 10, 45, health_buf);
             break;
         case StateRetry:
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(canvas, 20, 20, "You died!");
+            canvas_set_font(canvas, FontSecondary);
+            canvas_draw_str(canvas, 20, 40, "Try again?");
+
+            canvas_draw_str(canvas, 20, 60, state->yesno_selected ? "> Yes" : "  Yes");
+            canvas_draw_str(canvas, 70, 60, !state->yesno_selected ? "> No" : "  No");
             break;
     }
 }
@@ -129,9 +136,9 @@ int32_t zombies_main(void* p) {
                 continue;
             } else if(app_state.screen == StateRules) {
                 app_state.health = 100; // starting health
-//                app_state.horde = 101; // starting number of zombies
+                app_state.remaining = 101; // starting number of zombies
                 app_state.weapon = 0; // starts off with machete
-                app_state.fatigue = 0; // starts off godlike                 
+                app_state.fatigue = 0; // starts off godlike
 
                 app_state.screen = StateGame;
                 view_port_update(view_port);
@@ -151,13 +158,29 @@ int32_t zombies_main(void* p) {
             }
             if(app_state.health <= 0) {
                 snprintf(app_state.message, sizeof(app_state.message), "You died!");
-                app_state.screen = StateTitle; // or a new GameOver screen if you want
+                app_state.yesno_selected = 0;  // default to "Yes"
+                app_state.screen = StateRetry;
             }
-            
-            view_port_update(view_port);
+        } else if(app_state.screen == StateRetry) {
+            if(event.key == InputKeyLeft || event.key == InputKeyRight) {
+                app_state.yesno_selected = !app_state.yesno_selected;
+                view_port_update(view_port);
+            } else if(event.type == InputTypeShort && event.key == InputKeyOk) {
+                if(app_state.yesno_selected == 0) {
+                    app_state.health = 100;
+                    app_state.remaining = 101;  // formerly horde
+                    app_state.weapon = 0;
+                    app_state.fatigue = 0;
+                    app_state.zombies = 0;
+                    snprintf(app_state.message, sizeof(app_state.message), "Try again!");
+                    app_state.screen = StateGame;
+                } else {
+                    break;
+                }
+                view_port_update(view_port);
+            }
         }
     }
-
     furi_message_queue_free(event_queue);
     gui_remove_view_port(gui, view_port);
     view_port_free(view_port);
