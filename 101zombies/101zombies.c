@@ -8,16 +8,23 @@ typedef enum {
     StateRules,
     StateGame,
     StateQuitMenu,
+    StateRetry,
 } GameState;
 
 typedef struct {
     GameState screen;
     GameState prev_screen;
-    uint8_t quit_selected;
+    uint8_t yesno_selected;
 
-    int zombies; //
-    char message[64]; //
+    int zombies;
+    int remaining; 
+    int health;
+    int weapon;
+    int fatigue;
+
+    char message[64];
 } AppState;
+
 
 static void draw_callback(Canvas* canvas, void* ctx) {
     furi_assert(ctx);
@@ -47,18 +54,25 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             canvas_set_font(canvas, FontPrimary);
             canvas_draw_str(canvas, 20, 25, "Give up already?");
             canvas_set_font(canvas, FontKeyboard);
-            canvas_draw_str(canvas, 20, 45, state->quit_selected ? "> Yes" : "  Yes");
-            canvas_draw_str(canvas, 70, 45, !state->quit_selected ? "> No" : "  No");
+            canvas_draw_str(canvas, 20, 45, state->yesno_selected ? "> Yes" : "  Yes");
+            canvas_draw_str(canvas, 70, 45, !state->yesno_selected ? "> No" : "  No");
             break;
         case StateGame:
             canvas_set_font(canvas, FontPrimary);
             canvas_draw_str(canvas, 10, 15, "Zombies incoming!");
             canvas_set_font(canvas, FontSecondary); //
 
-            char buf[32]; //
-            snprintf(buf, sizeof(buf), "Zombies: %d", state->zombies); //
-            canvas_draw_str(canvas, 10, 35, buf); //
-            canvas_draw_str(canvas, 10, 55, state->message); //
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Zombies: %d", state->zombies);
+            canvas_draw_str(canvas, 10, 35, buf);
+
+            canvas_draw_str(canvas, 10, 55, state->message);
+
+            char health_buf[32];
+            snprintf(health_buf, sizeof(health_buf), "Health: %d", state->health);
+            canvas_draw_str(canvas, 10, 45, health_buf);
+            break;
+        case StateRetry:
             break;
     }
 }
@@ -97,10 +111,10 @@ int32_t zombies_main(void* p) {
             }
         } else if(app_state.screen == StateQuitMenu) {
             if(event.key == InputKeyLeft || event.key == InputKeyRight) {
-                app_state.quit_selected = !app_state.quit_selected;
+                app_state.yesno_selected = !app_state.yesno_selected;
                 view_port_update(view_port);
             } else if(event.type == InputTypeShort && event.key == InputKeyOk) {
-                if(app_state.quit_selected) {
+                if(app_state.yesno_selected) {
                     break;
                 } else {
                     app_state.screen = app_state.prev_screen;
@@ -114,6 +128,11 @@ int32_t zombies_main(void* p) {
                 view_port_update(view_port);
                 continue;
             } else if(app_state.screen == StateRules) {
+                app_state.health = 100; // starting health
+//                app_state.horde = 101; // starting number of zombies
+                app_state.weapon = 0; // starts off with machete
+                app_state.fatigue = 0; // starts off godlike                 
+
                 app_state.screen = StateGame;
                 view_port_update(view_port);
                 continue;
@@ -121,11 +140,20 @@ int32_t zombies_main(void* p) {
         } else if(app_state.screen == StateGame && event.type == InputTypeShort) {
             app_state.zombies = rand() % 10 + 1;
 
-            if(event.key == InputKeyRight) {
-                snprintf(app_state.message, sizeof(app_state.message), "You fought!");
-            } else if(event.key == InputKeyLeft) {
-                snprintf(app_state.message, sizeof(app_state.message), "You ran away!");
+            if(event.key == InputKeyRight) { // fight
+                int damage = rand() % 15 + 1;
+                app_state.health -= damage;
+                snprintf(app_state.message, sizeof(app_state.message), "Fought! -%d HP", damage);
+            } else if(event.key == InputKeyLeft) { // run
+                int damage = rand() % 10;
+                app_state.health -= damage;
+                snprintf(app_state.message, sizeof(app_state.message), "Ran! -%d HP", damage);
             }
+            if(app_state.health <= 0) {
+                snprintf(app_state.message, sizeof(app_state.message), "You died!");
+                app_state.screen = StateTitle; // or a new GameOver screen if you want
+            }
+            
             view_port_update(view_port);
         }
     }
