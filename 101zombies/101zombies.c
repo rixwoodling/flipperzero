@@ -54,23 +54,15 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             canvas_set_font(canvas, FontPrimary);
             canvas_draw_str(canvas, 20, 25, "Give up already?");
             canvas_set_font(canvas, FontKeyboard);
-            canvas_draw_str(canvas, 20, 45, state->yesno_selected ? "> Yes" : "  Yes");
-            canvas_draw_str(canvas, 70, 45, !state->yesno_selected ? "> No" : "  No");
+            canvas_draw_str(canvas, 20, 45, state->yesno_selected ? "* Yes" : "  Yes");
+            canvas_draw_str(canvas, 70, 45, !state->yesno_selected ? "* No" : "  No");
             break;
         case StateGame:
-            canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str(canvas, 10, 15, "Zombies incoming!");
-            canvas_set_font(canvas, FontSecondary); //
-
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Zombies: %d", state->zombies);
-            canvas_draw_str(canvas, 10, 35, buf);
-
-            canvas_draw_str(canvas, 10, 55, state->message);
-
-            char health_buf[32];
-            snprintf(health_buf, sizeof(health_buf), "Health: %d", state->health);
-            canvas_draw_str(canvas, 10, 45, health_buf);
+            canvas_set_font(canvas, FontSecondary);
+            canvas_draw_str(canvas, 1, 10, state->message);
+            char* second_line = strchr(state->message, '\n');
+            second_line++; // move past '\n'
+            canvas_draw_str(canvas, 1, 20, second_line);
             break;
         case StateRetry:
             canvas_set_font(canvas, FontPrimary);
@@ -78,8 +70,8 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             canvas_set_font(canvas, FontSecondary);
             canvas_draw_str(canvas, 20, 40, "Try again?");
             canvas_set_font(canvas, FontKeyboard);
-            canvas_draw_str(canvas, 20, 60, state->yesno_selected ? "> Yes" : "  Yes");
-            canvas_draw_str(canvas, 70, 60, !state->yesno_selected ? "> No" : "  No");
+            canvas_draw_str(canvas, 20, 60, state->yesno_selected ? "* Yes" : "  Yes");
+            canvas_draw_str(canvas, 70, 60, !state->yesno_selected ? "* No" : "  No");
             break;
     }
 }
@@ -88,6 +80,23 @@ static void input_callback(InputEvent* input_event, void* ctx) {
     furi_assert(ctx);
     FuriMessageQueue* event_queue = ctx;
     furi_message_queue_put(event_queue, input_event, FuriWaitForever);
+}
+
+static void generate_encounter(AppState* state) {
+    state->zombies = rand() % 10 + 1;
+
+    char dots[16];
+    memset(dots, '.', state->zombies);
+    dots[state->zombies] = '\0';
+
+    snprintf(state->message, sizeof(state->message),
+        "%d %s\n%d zombie%s approach%s.",
+        state->remaining,   // countdown (101, 100, ...)
+        dots,               // how many dots
+        state->zombies,     // how many zombies
+        state->zombies != 1 ? "s" : "",  // pluralize zombie
+        state->zombies == 1 ? "es" : ""  // singular verb "approaches"
+    );
 }
 
 int32_t zombies_main(void* p) {
@@ -140,6 +149,8 @@ int32_t zombies_main(void* p) {
                 app_state.weapon = 0; // starts off with machete
                 app_state.fatigue = 0; // starts off godlike
 
+                generate_encounter(&app_state);
+
                 app_state.screen = StateGame;
                 view_port_update(view_port);
                 continue;
@@ -147,14 +158,37 @@ int32_t zombies_main(void* p) {
         } else if(app_state.screen == StateGame && event.type == InputTypeShort) {
             app_state.zombies = rand() % 10 + 1;
 
+            if(app_state.remaining > 0) {
+                app_state.remaining -= app_state.zombies;
+                if(app_state.remaining < 0) app_state.remaining = 0; // prevent negative
+
+            }
+
+            char dots[16];// allow up to 16 dots
+            memset(dots, '.', app_state.zombies);
+            dots[app_state.zombies] = '\0'; // null terminate
+
+            snprintf(app_state.message, sizeof(app_state.message),
+                "%d %s\n%d zombie%s approach%s.",
+                app_state.remaining,
+                dots,
+                app_state.zombies,
+                app_state.zombies != 1 ? "s" : "",
+                app_state.zombies == 1 ? "" : "es");
+
             if(event.key == InputKeyRight) { // fight
                 int damage = rand() % 15 + 1;
                 app_state.health -= damage;
-                snprintf(app_state.message, sizeof(app_state.message), "Fought! -%d HP", damage);
+
+                size_t len = strlen(app_state.message);
+                snprintf(app_state.message + len, sizeof(app_state.message) - len, "\nFought! -%d HP", damage);
+
             } else if(event.key == InputKeyLeft) { // run
                 int damage = rand() % 10;
                 app_state.health -= damage;
-                snprintf(app_state.message, sizeof(app_state.message), "Ran! -%d HP", damage);
+
+                size_t len = strlen(app_state.message);
+                snprintf(app_state.message + len, sizeof(app_state.message) - len, "\nRan! -%d HP", damage);
             }
             if(app_state.health <= 0) {
                 app_state.yesno_selected = 1;  // default to "Yes"
@@ -164,8 +198,8 @@ int32_t zombies_main(void* p) {
         } else if(app_state.screen == StateRetry) {
             if(event.key == InputKeyLeft || event.key == InputKeyRight) {
                 app_state.yesno_selected = !app_state.yesno_selected;
-
                 view_port_update(view_port);
+
             } else if(event.key == InputKeyOk) {
                 if(app_state.yesno_selected) {
                     app_state.health = 100;
@@ -173,6 +207,9 @@ int32_t zombies_main(void* p) {
                     app_state.weapon = 0;
                     app_state.fatigue = 0;
                     app_state.zombies = 0;
+
+                    generate_encounter(&app_state);
+
                     app_state.screen = StateGame;
                 } else {
                     break;
@@ -187,7 +224,4 @@ int32_t zombies_main(void* p) {
     furi_record_close(RECORD_GUI);
 
     return 0;
-}
-
-
 }
