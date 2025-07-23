@@ -21,6 +21,7 @@ typedef struct {
     int health;
     int weapon;
     int fatigue;
+    int damage;
 
     char line1[32];
     char line2[32];
@@ -87,13 +88,13 @@ int32_t zombies_main(void* p) {
     UNUSED(p);
     InputEvent event;
 
-    // set starting screen and refill horde
-    AppState app_state = {
-        .screen = StateTitle,
-        .remaining = 101
-    };
+    AppState app_state;
+    memset(&app_state, 0, sizeof(AppState));
+    app_state.screen = StateTitle,
+    app_state.remaining = 101;
 
     FuriMessageQueue* event_queue = furi_message_queue_alloc(8, sizeof(InputEvent));
+//    furi_message_queue_reset(event_queue);
     ViewPort* view_port = view_port_alloc();
     view_port_draw_callback_set(view_port, draw_callback, &app_state);
     view_port_input_callback_set(view_port, input_callback, event_queue);
@@ -167,33 +168,34 @@ int32_t zombies_main(void* p) {
             view_port_update(view_port);
 
             // combat
-            if(event.type == InputTypeShort) {
+            if((event.key == InputKeyRight && event.type == InputTypeShort) ||
+               (event.key == InputKeyLeft && event.type == InputTypeShort)) {
+
                 if(event.key == InputKeyRight) { // fight logic
                     int damage = rand() % 15 + 1;
                     app_state.health -= damage;
                     // TODO: line3: Fought! -d% HP
 
-                } else if(event.key == InputKeyLeft && event.type == InputTypeShort) { // run logic
+                } else if(event.key == InputKeyLeft) { // run logic
                     int damage = rand() % 10;
                     app_state.health -= damage;
                     // TODO: line3 Ran! -d% HP
-                } else {
-                    continue; //ignore other keys
                 }
 
                 // subtract zombies from remaining
                 app_state.remaining -= app_state.zombies;
                 if(app_state.remaining < 0) app_state.remaining = 0;
 
-                // if player dead, retry screen
+                // death check
                 if(app_state.health <= 0) {
                     app_state.yesno_selected = 1;  // default to "Yes"
                     app_state.screen = StateRetry;
                     view_port_update(view_port);
                 }
+                app_state.zombies = rand() % 10 + 1;
             }
 
-        // retry if dead
+//----->| // retry if dead
         } else if(app_state.screen == StateRetry) {
             if(event.key == InputKeyLeft || event.key == InputKeyRight) {
                 app_state.yesno_selected = !app_state.yesno_selected;
