@@ -25,6 +25,7 @@ typedef struct {
 
     char line1[32];
     char line2[32];
+    char line3[32];
 } AppState;
 
 
@@ -63,7 +64,7 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             canvas_set_font(canvas, FontSecondary);
             canvas_draw_str(canvas, 1, 10, state->line1);
             canvas_draw_str(canvas, 1, 20, state->line2);
-            // TODO: add line3 later
+            canvas_draw_str(canvas, 1, 30, state->line3);
             break;
         case StateRetry:
             canvas_set_font(canvas, FontPrimary);
@@ -164,6 +165,9 @@ int32_t zombies_main(void* p) {
                 app_state.zombies,
                 app_state.zombies != 1 ? "s" : "",
                 app_state.zombies == 1 ? "" : "es");
+
+            size_t free_mem = memmgr_get_free_heap();
+            snprintf(app_state.line3, sizeof(app_state.line3), "Mem: %uB", (unsigned int)free_mem);
 
             view_port_update(view_port);
 
