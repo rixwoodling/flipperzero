@@ -6,7 +6,6 @@
 typedef enum {
     StateTitle,
     StateRules,
-    StateReset,
     StateGame,
     StateQuitMenu,
     StateRetry,
@@ -59,8 +58,6 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             canvas_draw_str(canvas, 20, 45, state->yesno_selected ? "* Yes" : "  Yes");
             canvas_draw_str(canvas, 70, 45, !state->yesno_selected ? "* No" : "  No");
             break;
-        case StateReset:
-            break;
         case StateGame:
             canvas_set_font(canvas, FontSecondary);
             canvas_draw_str(canvas, 1, 10, state->line1);
@@ -90,7 +87,10 @@ int32_t zombies_main(void* p) {
     UNUSED(p);
     InputEvent event;
 
-    AppState app_state = {.screen = StateTitle};
+    AppState app_state = {
+        .screen = StateTitle,
+        .remaining = 101
+    };
 
     FuriMessageQueue* event_queue = furi_message_queue_alloc(8, sizeof(InputEvent));
     ViewPort* view_port = view_port_alloc();
@@ -136,25 +136,19 @@ int32_t zombies_main(void* p) {
                 view_port_update(view_port);
                 continue;
             } else if(app_state.screen == StateRules) {
-                app_state.screen = StateReset;
-                view_port_update(view_port);
+                app_state.screen = StateGame;
                 continue;
             }
 
-        // reset game counters for first wave
-        } else if(app_state.screen == StateReset) {
-            app_state.health = 100;
-            app_state.remaining = 101;
-            app_state.weapon = 0;
-            app_state.fatigue = 0;
-            app_state.zombies = rand() % 10 + 1;
-
-            app_state.screen = StateGame;
-            view_port_update(view_port);
-            continue;
-
         // inside game loop
-        } else if(app_state.screen == StateGame && event.type == InputTypeShort) {
+        } else if(app_state.screen == StateGame) {
+
+            if(app_state.remaining == 101) {
+                app_state.health = 100;
+                app_state.weapon = 0;
+                app_state.fatigue = 0;
+                app_state.zombies = rand() % 10 + 1;
+            }
 
             char dots[16];// allow up to 16 dots
             memset(dots, '.', app_state.zombies);
@@ -169,26 +163,33 @@ int32_t zombies_main(void* p) {
                 app_state.zombies != 1 ? "s" : "",
                 app_state.zombies == 1 ? "" : "es");
 
-            if(event.key == InputKeyRight) { // fight logic
-                int damage = rand() % 15 + 1;
-                app_state.health -= damage;
-                // TODO: line3: Fought! -d% HP
+            view_port_update(view_port);
 
-            } else if(event.key == InputKeyLeft) { // run logic
-                int damage = rand() % 10;
-                app_state.health -= damage;
-                // TODO: line3 Ran! -d% HP
-            }
+            // combat
+            if(event.type == InputTypeShort) {
+                if(event.key == InputKeyRight) { // fight logic
+                    int damage = rand() % 15 + 1;
+                    app_state.health -= damage;
+                    // TODO: line3: Fought! -d% HP
 
-            // subtract zombies from remaining
-            app_state.remaining -= app_state.zombies;
-            if(app_state.remaining < 0) app_state.remaining = 0;
+                } else if(event.key == InputKeyLeft && event.type == InputTypeShort) { // run logic
+                    int damage = rand() % 10;
+                    app_state.health -= damage;
+                    // TODO: line3 Ran! -d% HP
+                } else {
+                    continue; //ignore other keys
+                }
 
-            // if player dead, retry screen
-            if(app_state.health <= 0) {
-                app_state.yesno_selected = 1;  // default to "Yes"
-                app_state.screen = StateRetry;
-                view_port_update(view_port);
+                // subtract zombies from remaining
+                app_state.remaining -= app_state.zombies;
+                if(app_state.remaining < 0) app_state.remaining = 0;
+
+                // if player dead, retry screen
+                if(app_state.health <= 0) {
+                    app_state.yesno_selected = 1;  // default to "Yes"
+                    app_state.screen = StateRetry;
+                    view_port_update(view_port);
+                }
             }
 
         // retry if dead
@@ -199,7 +200,8 @@ int32_t zombies_main(void* p) {
 
             } else if(event.key == InputKeyOk) {
                 if(app_state.yesno_selected) {
-                    app_state.screen = StateReset;
+                    app_state.remaining = 101;
+                    app_state.screen = StateGame;
                 } else {
                     break;
                 }
@@ -214,4 +216,3 @@ int32_t zombies_main(void* p) {
 
     return 0;
 }
-
