@@ -87,6 +87,7 @@ int32_t zombies_main(void* p) {
     UNUSED(p);
     InputEvent event;
 
+    // set starting screen and refill horde
     AppState app_state = {
         .screen = StateTitle,
         .remaining = 101
