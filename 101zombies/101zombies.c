@@ -28,7 +28,7 @@ typedef struct {
     char line4[32];
 } AppState;
 
-// ✅ Helper to reset game state and generate initial wave
+// Helper to reset game state and generate initial wave
 static void reset_game_state(AppState* app_state) {
     app_state->remaining = 101;
     app_state->health = 100;
@@ -183,7 +183,7 @@ int32_t zombies_main(void* p) {
                     if(app_state.remaining < 0) app_state.remaining = 0;
                     snprintf(app_state.line4, sizeof(app_state.line4), "Pressed RIGHT!");
 
-                    // ✅ Spawn next wave immediately
+                    // Spawn next wave immediately
                     app_state.zombies = rand() % 10 + 1;
                 } break;
 
@@ -194,7 +194,7 @@ int32_t zombies_main(void* p) {
                     if(app_state.remaining < 0) app_state.remaining = 0;
                     snprintf(app_state.line4, sizeof(app_state.line4), "Pressed LEFT!");
 
-                    // ✅ Spawn next wave immediately
+                    // Spawn next wave immediately
                     app_state.zombies = rand() % 10 + 1;
                 } break;
 
@@ -219,7 +219,7 @@ int32_t zombies_main(void* p) {
                     break;
             }
 
-            // ✅ Always refresh display for *current* wave
+            // Always refresh display for *current* wave
             char dots[16];
             memset(dots, '.', app_state.zombies);
             dots[app_state.zombies] = '\0';
