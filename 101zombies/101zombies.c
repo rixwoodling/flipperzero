@@ -28,14 +28,7 @@ typedef struct {
     char line4[32];
 } AppState;
 
-// Helper to reset game state and generate initial wave
-static void reset_game_state(AppState* app_state) {
-    app_state->remaining = 101;
-    app_state->health = 100;
-    app_state->weapon = 0;
-    app_state->fatigue = 0;
-    app_state->zombies = rand() % 10 + 1;
-
+static void update_wave_text(AppState* app_state) {
     char dots[16];
     memset(dots, '.', app_state->zombies);
     dots[app_state->zombies] = '\0';
@@ -48,9 +41,17 @@ static void reset_game_state(AppState* app_state) {
              app_state->zombies,
              app_state->zombies != 1 ? "s" : "",
              app_state->zombies == 1 ? "" : "es");
+}
 
-    app_state->line3[0] = '\0';
-    app_state->line4[0] = '\0';
+// Helper to reset game state and generate initial wave
+static void reset_game_state(AppState* app_state) {
+    app_state->remaining = 101;
+    app_state->health = 100;
+    app_state->weapon = 0;
+    app_state->fatigue = 0;
+    app_state->zombies = rand() % 10 + 1;
+
+    update_wave_text(app_state);
 }
 
 static void draw_callback(Canvas* canvas, void* ctx) {
@@ -204,19 +205,10 @@ int32_t zombies_main(void* p) {
                     break;
 
                 case InputKeyUp:
-                    snprintf(app_state.line4, sizeof(app_state.line4), "Pressed UP!");
-                    break;
-
                 case InputKeyDown:
-                    snprintf(app_state.line4, sizeof(app_state.line4), "Pressed DOWN!");
-                    break;
-
                 case InputKeyOk:
-                    snprintf(app_state.line4, sizeof(app_state.line4), "Pressed OK!");
-                    break;
-
-                default:
-                    break;
+		default:
+		    break;
             }
 
             // Always refresh display for *current* wave
