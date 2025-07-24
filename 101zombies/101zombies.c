@@ -8,6 +8,7 @@ typedef enum {
     StateRules,
     StateGame,
     StateQuitMenu,
+    StateWin,
     StateRetry,
 } GameState;
 
@@ -28,19 +29,45 @@ typedef struct {
     char line4[32];
 } AppState;
 
+static const char* health_emo[] = {
+    "dead","very fucked up","fucked up","like total shit","like shit",
+    "wounded","banged up","alright","great","fuckin' great","godlike"
+};	
+
+static float fight_probability(AppState* app_state) {
+    // Same as Python prob() function
+    float player = (app_state->health + (app_state->weapon * 10)) / 20.0f;
+    float enemy  = (app_state->zombies * 5) / 10.0f;
+
+    if((player + enemy) <= 0.0f) {
+        return 0.0f;
+    }
+
+    return 100.0f * (player / (player + enemy)); // win chance in %
+}
+
 static void update_wave_text(AppState* app_state) {
     char dots[16];
     memset(dots, '.', app_state->zombies);
     dots[app_state->zombies] = '\0';
 
     snprintf(app_state->line1, sizeof(app_state->line1),
-             "%d %s", app_state->remaining, dots);
+        "%d %s", app_state->remaining, dots);
 
-    snprintf(app_state->line2, sizeof(app_state->line2),
-             "%d zombie%s approach%s.",
-             app_state->zombies,
-             app_state->zombies != 1 ? "s" : "",
-             app_state->zombies == 1 ? "" : "es");
+    if(app_state->zombies == 1) {
+        snprintf(app_state->line2, sizeof(app_state->line2),
+	    "A lone zombie approaches.");
+    } else {
+	snprintf(app_state->line2, sizeof(app_state->line2),
+	    "%d zombies approach.", app_state->zombies);	    	
+    }
+
+    int idx = app_state->health / 10;
+    if(idx > 10) idx = 10;
+    if(idx < 0) idx = 0;
+
+    snprintf(app_state->line3, sizeof(app_state->line3),
+        "You're feeling %s.", health_emo[idx]);		    
 }
 
 // Helper to reset game state and generate initial wave
@@ -63,7 +90,7 @@ static void draw_callback(Canvas* canvas, void* ctx) {
     switch(state->screen) {
         case StateTitle:
             canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str(canvas, 32, 15, "101 Zombies!");
+            canvas_draw_str(canvas, 30, 15, "101 Zombies!");
             canvas_set_font(canvas, FontSecondary);
             canvas_draw_str(canvas, 1, 30, "Choose to FIGHT or RUN away");
             canvas_draw_str(canvas, 1, 40, "from the zombie horde!");
@@ -81,6 +108,8 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             break;
 
         case StateQuitMenu:
+	    canvas_set_font(canvas, FontSecondary);
+	    canvas_draw_str(canvas, 1, 10, "github / rixwoodling"); 
             canvas_set_font(canvas, FontPrimary);
             canvas_draw_str(canvas, 20, 25, "Give up already?");
             canvas_set_font(canvas, FontKeyboard);
@@ -89,21 +118,33 @@ static void draw_callback(Canvas* canvas, void* ctx) {
             break;
 
         case StateGame:
-            canvas_set_font(canvas, FontSecondary);
+            canvas_set_font(canvas, FontKeyboard);
             canvas_draw_str(canvas, 1, 10, state->line1);
-            canvas_draw_str(canvas, 1, 20, state->line2);
+            canvas_set_font(canvas, FontSecondary);
+	    canvas_draw_str(canvas, 1, 20, state->line2);
             canvas_draw_str(canvas, 1, 30, state->line3);
             canvas_draw_str(canvas, 1, 40, state->line4);
-            break;
+//            canvas_draw_str(canvas, 1, 50, state->line5);
+//            canvas_draw_str(canvas, 1, 60, state->line6);
+	    break;
+
+	case StateWin:
+	    canvas_set_font(canvas, FontSecondary);
+	    canvas_draw_str(canvas, 5, 25, "Few ever make it to the end.");
+	    canvas_draw_str(canvas, 5, 35, "But you slaughtered them all.");
+	    canvas_draw_str(canvas, 10, 45, "You are a fucking HERO!");
+	    break;
 
         case StateRetry:
             canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str(canvas, 20, 20, "You died!");
+            canvas_draw_str(canvas, 50, 15, "DEAD!");
             canvas_set_font(canvas, FontSecondary);
-            canvas_draw_str(canvas, 20, 40, "Try again?");
+            canvas_draw_str(canvas, 1, 27, "Unfortunately, your wounds");
+	    canvas_draw_str(canvas, 1, 37, "bring you down. And now you");
+	    canvas_draw_str(canvas, 1, 47, "turn into a zombie!");
             canvas_set_font(canvas, FontKeyboard);
-            canvas_draw_str(canvas, 20, 60, state->yesno_selected ? "* Yes" : "  Yes");
-            canvas_draw_str(canvas, 70, 60, !state->yesno_selected ? "* No" : "  No");
+            canvas_draw_str(canvas, 5, 60, state->yesno_selected ? "> Retry" : "  Retry");
+            canvas_draw_str(canvas, 80, 60, !state->yesno_selected ? "> Exit" : "  Exit");
             break;
     }
 }
@@ -178,61 +219,77 @@ int32_t zombies_main(void* p) {
 
             switch(event.key) {
                 case InputKeyRight: {
-                    int damage = rand() % 15 + 1;
+		    // calculate win chance
+		    float prob = fight_probability(&app_state);
+                    int roll = rand() % 100 + 1; // random 1-100
+		    
+                    if(roll < prob) {
+                        // win fight
+		        snprintf(app_state.line4, sizeof(app_state.line4), "You fight and win!");
+		        app_state.remaining -= app_state.zombies;
+		        if(app_state.remaining < 0) app_state.remaining = 0;
+
+		        // weapon upgrade chance
+		        if((rand() % 100) > 70 && app_state.weapon < 7) {
+			    app_state.weapon += 1;
+		            // TODO: show "You find <weapon_name>!"	
+	                }		    
+
+		        // fatigue increase on win
+		        app_state.fatigue += 1.5f;
+                    } else {
+                        // lose fight
+			app_state.fatigue += 2.5f; // losing is more tiring
+
+			// damage = pain() + fatigue
+                        int damage = (rand() % 15 + 1) + (int)app_state.fatigue;
+                        app_state.health -= damage;
+
+			app_state.remaining -= app_state.zombies;
+			if(app_state.remaining < 0) app_state.remaining = 0;
+
+			if(app_state.health > 0) {
+			    snprintf(app_state.line4, sizeof(app_state.line4), "Zombies do some damage!");
+                        }
+		    }
+                    // Spawn next wave immediately
+		    if(app_state.health > 0) {
+		        app_state.zombies = rand() % 10 + 1;	    
+		    }
+                } break;
+		
+		case InputKeyLeft: {
+		    int damage = rand() % 10;
                     app_state.health -= damage;
                     app_state.remaining -= app_state.zombies;
-                    if(app_state.remaining < 0) app_state.remaining = 0;
-                    snprintf(app_state.line4, sizeof(app_state.line4), "Pressed RIGHT!");
+		    if(app_state.remaining < 0) app_state.remaining = 0;
+		    snprintf(app_state.line4, sizeof(app_state.line4), "You Ran!");
 
-                    // Spawn next wave immediately
-                    app_state.zombies = rand() % 10 + 1;
-                } break;
+		    // Spawn next wave immediately
+                    if(app_state.health > 0) {
+                        app_state.zombies = rand() % 10 + 1;
+                    }
+                } break;		    
 
-                case InputKeyLeft: {
-                    int damage = rand() % 10;
-                    app_state.health -= damage;
-                    app_state.remaining -= app_state.zombies;
-                    if(app_state.remaining < 0) app_state.remaining = 0;
-                    snprintf(app_state.line4, sizeof(app_state.line4), "Pressed LEFT!");
-
-                    // Spawn next wave immediately
-                    app_state.zombies = rand() % 10 + 1;
-                } break;
-
-                case InputKeyBack:
-                    app_state.prev_screen = app_state.screen;
-                    app_state.screen = StateQuitMenu;
-                    break;
-
-                case InputKeyUp:
-                case InputKeyDown:
-                case InputKeyOk:
 		default:
 		    break;
             }
 
-            // Always refresh display for *current* wave
-            char dots[16];
-            memset(dots, '.', app_state.zombies);
-            dots[app_state.zombies] = '\0';
+	    // death check
+	    if(app_state.remaining <=0) {
+                app_state.remaining = 0;
+                app_state.screen = StateWin;		
+	    } else if(app_state.health <=0) {
+		app_state.health = 0;    
+	        app_state.yesno_selected = 1;
+	        app_state.screen = StateRetry;
+	    }	
 
-            snprintf(app_state.line1, sizeof(app_state.line1),
-                     "%d %s", app_state.remaining, dots);
-
-            snprintf(app_state.line2, sizeof(app_state.line2),
-                     "%d zombie%s approach%s.",
-                     app_state.zombies,
-                     app_state.zombies != 1 ? "s" : "",
-                     app_state.zombies == 1 ? "" : "es");
-
-            // death check
-            if(app_state.health <= 0) {
-                app_state.yesno_selected = 1;  // default to "Yes"
-                app_state.screen = StateRetry;
-            }
-
+            // update wave text and redraw
+	    update_wave_text(&app_state);
             view_port_update(view_port);
 
+	    
         } else if(app_state.screen == StateRetry) {
             if(event.key == InputKeyLeft || event.key == InputKeyRight) {
                 app_state.yesno_selected = !app_state.yesno_selected;
@@ -257,4 +314,3 @@ int32_t zombies_main(void* p) {
 
     return 0;
 }
-
