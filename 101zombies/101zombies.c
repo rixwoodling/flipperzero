@@ -7,6 +7,7 @@ typedef enum {
     StateTitle,
     StateRules,
     StateGame,
+    StateResult,
     StateQuitMenu,
     StateWin,
     StateRetry,
@@ -27,12 +28,30 @@ typedef struct {
     char line2[32];
     char line3[32];
     char line4[32];
+    char line5[32];
+    char line6[32];
+
+    char result1[48];
+    char result2[32];
+    char result3[32];
 } AppState;
 
 static const char* health_emo[] = {
     "dead","very fucked up","fucked up","like total shit","like shit",
     "wounded","banged up","alright","great","fuckin' great","godlike"
 };	
+
+static const char* weapon_names[] = {
+    "a machete","a chainsaw","a shotgun","an AK-47",
+    "a minigun","a flamethrower","double flamethrowers","the death ray"
+};
+
+static const char* luck_text[] = {
+    "you got no chance in hell.","odds are slim.","you'd better run.",
+    "it's dicey at best.","it'll be a tough fight.","it's a toss up.",
+    "you've seen worse.","the odds are with you.",
+    "this shouldn't be a problem.","easy.","you can't lose!"
+};
 
 static float fight_probability(AppState* app_state) {
     // Same as Python prob() function
@@ -67,7 +86,17 @@ static void update_wave_text(AppState* app_state) {
     if(idx < 0) idx = 0;
 
     snprintf(app_state->line3, sizeof(app_state->line3),
-        "You're feeling %s.", health_emo[idx]);		    
+        "You're feeling %s.", health_emo[idx]);
+
+    snprintf(app_state->line4, sizeof(app_state->line4),
+	"Armed with %s,", weapon_names[app_state->weapon]);
+
+    float prob = fight_probability(app_state);
+    int idx_prob = (int)(prob / 10.0f);
+    if(idx_prob > 10) idx_prob = 10;
+
+    snprintf(app_state->line5, sizeof(app_state->line5),
+	"%s", luck_text[idx_prob]);	    
 }
 
 // Helper to reset game state and generate initial wave
@@ -76,7 +105,7 @@ static void reset_game_state(AppState* app_state) {
     app_state->health = 100;
     app_state->weapon = 0;
     app_state->fatigue = 0;
-    app_state->zombies = rand() % 10 + 1;
+    app_state->zombies = rand() % (app_state->weapon + 10) + 1;
 
     update_wave_text(app_state);
 }
@@ -124,15 +153,28 @@ static void draw_callback(Canvas* canvas, void* ctx) {
 	    canvas_draw_str(canvas, 1, 20, state->line2);
             canvas_draw_str(canvas, 1, 30, state->line3);
             canvas_draw_str(canvas, 1, 40, state->line4);
-//            canvas_draw_str(canvas, 1, 50, state->line5);
-//            canvas_draw_str(canvas, 1, 60, state->line6);
+            canvas_draw_str(canvas, 1, 50, state->line5);
+            canvas_draw_str(canvas, 1, 60, state->line6);
 	    break;
+
+        case StateResult:
+	    canvas_set_font(canvas, FontKeyboard);
+	    canvas_draw_str(canvas, 1, 10, state->result1);
+	    canvas_set_font(canvas, FontSecondary);
+	    canvas_draw_str(canvas, 1, 20, state->result2);
+            if(strlen(state->result3) > 0) {
+	        canvas_draw_str(canvas, 1, 30, state->result3);
+	    }
+            break;
 
 	case StateWin:
 	    canvas_set_font(canvas, FontSecondary);
 	    canvas_draw_str(canvas, 5, 25, "Few ever make it to the end.");
 	    canvas_draw_str(canvas, 5, 35, "But you slaughtered them all.");
 	    canvas_draw_str(canvas, 10, 45, "You are a fucking HERO!");
+            canvas_set_font(canvas, FontKeyboard);
+            canvas_draw_str(canvas, 5, 60, state->yesno_selected ? "> Retry" : "  Retry");
+            canvas_draw_str(canvas, 80, 60, !state->yesno_selected ? "> Exit" : "  Exit");
 	    break;
 
         case StateRetry:
@@ -168,6 +210,7 @@ int32_t zombies_main(void* p) {
     ViewPort* view_port = view_port_alloc();
     view_port_draw_callback_set(view_port, draw_callback, &app_state);
     view_port_input_callback_set(view_port, input_callback, event_queue);
+    view_port_set_update_interval(view_port, 10000);
 
     Gui* gui = furi_record_open(RECORD_GUI);
     gui_add_view_port(gui, view_port, GuiLayerFullscreen);
@@ -197,8 +240,23 @@ int32_t zombies_main(void* p) {
                 } else {
                     app_state.screen = app_state.prev_screen;
                     view_port_update(view_port);
-                    continue;
                 }
+            }
+
+	// win screen
+	} else if(app_state.screen == StateWin) {
+	    if(event.key == InputKeyLeft || event.key == InputKeyRight) {
+	        app_state.yesno_selected = !app_state.yesno_selected;
+		view_port_update(view_port);
+	    } else if(event.key == InputKeyOk) {
+		if(app_state.yesno_selected) {    
+		    // retry selected
+		    reset_game_state(&app_state);
+	            app_state.screen = StateGame;
+	        } else {	    
+		    break;
+		}    
+                view_port_update(view_port);	    
             }
 
         // control OK key functionality
@@ -225,18 +283,34 @@ int32_t zombies_main(void* p) {
 		    
                     if(roll < prob) {
                         // win fight
-		        snprintf(app_state.line4, sizeof(app_state.line4), "You fight and win!");
 		        app_state.remaining -= app_state.zombies;
 		        if(app_state.remaining < 0) app_state.remaining = 0;
+
+                        // fatigue increase on win
+			app_state.fatigue += 1.5f;
+			
+			// result screen text
+			snprintf(app_state.result1, sizeof(app_state.result1),
+			    "%d ********", app_state.remaining);
+	                snprintf(app_state.result2, sizeof(app_state.result2),
+			    "You fight and win!");		
 
 		        // weapon upgrade chance
 		        if((rand() % 100) > 70 && app_state.weapon < 7) {
 			    app_state.weapon += 1;
-		            // TODO: show "You find <weapon_name>!"	
-	                }		    
+		            snprintf(app_state.result3, sizeof(app_state.result3),
+				"You find %s! +%d",
+		                weapon_names[app_state.weapon],
+		                app_state.weapon);
+			} else {
+			    app_state.result3[0] = '\0';
+		        }
 
-		        // fatigue increase on win
-		        app_state.fatigue += 1.5f;
+                        // go to result screen
+			app_state.screen = StateResult;
+			view_port_update(view_port);
+			break;
+
                     } else {
                         // lose fight
 			app_state.fatigue += 2.5f; // losing is more tiring
@@ -248,13 +322,28 @@ int32_t zombies_main(void* p) {
 			app_state.remaining -= app_state.zombies;
 			if(app_state.remaining < 0) app_state.remaining = 0;
 
+                        // dead zombie stars
+			char stars[32];
+			int star_count = app_state.zombies;
+			if(star_count > 30) star_count = 30;
+			memset(stars, '*', star_count);
+			stars[star_count] = '\0';
+
+			// result screen for losing fight
+			snprintf(app_state.result1, sizeof(app_state.result1),
+			    "%d %s", app_state.remaining, stars);
+
 			if(app_state.health > 0) {
-			    snprintf(app_state.line4, sizeof(app_state.line4), "Zombies do some damage!");
+			    snprintf(app_state.result2, sizeof(app_state.result2), "Zombies do some damage!");
+			    snprintf(app_state.result3, sizeof(app_state.result3), "but you kill 'em all!");
+			} else {
+			    app_state.result2[0] = '\0';
+		            app_state.result3[0] = '\0';	    
                         }
-		    }
-                    // Spawn next wave immediately
-		    if(app_state.health > 0) {
-		        app_state.zombies = rand() % 10 + 1;	    
+		        // go to result screen
+			app_state.screen = StateResult;
+	                view_port_update(view_port);
+	                break;		
 		    }
                 } break;
 		
@@ -266,9 +355,9 @@ int32_t zombies_main(void* p) {
 		    snprintf(app_state.line4, sizeof(app_state.line4), "You Ran!");
 
 		    // Spawn next wave immediately
-                    if(app_state.health > 0) {
-                        app_state.zombies = rand() % 10 + 1;
-                    }
+                    //if(app_state.health > 0) {
+                    //    app_state.zombies = rand() % 10 + 1;
+                    //}
                 } break;		    
 
 		default:
@@ -289,7 +378,29 @@ int32_t zombies_main(void* p) {
 	    update_wave_text(&app_state);
             view_port_update(view_port);
 
-	    
+	} else if(app_state.screen == StateResult) {
+            if(event.type == InputTypeShort && 
+                (event.key == InputKeyOk || event.key == InputKeyLeft || event.key == InputKeyRight)) {
+
+		if(app_state.health > 0 && app_state.remaining > 0) {
+		    // spawn next wave
+                    app_state.zombies = rand() % (app_state.weapon + 10) + 1;
+	            if(app_state.zombies > app_state.remaining) {
+	                app_state.zombies = app_state.remaining;
+		    }
+	            update_wave_text(&app_state);
+       	            app_state.screen = StateGame;	
+		
+		} else if(app_state.remaining <= 0) {
+		    app_state.screen = StateWin;
+
+	        } else if(app_state.health <= 0) {
+                    app_state.yesno_selected = 1;
+		    app_state.screen = StateRetry;
+	        }
+                view_port_update(view_port);	
+	    }	
+
         } else if(app_state.screen == StateRetry) {
             if(event.key == InputKeyLeft || event.key == InputKeyRight) {
                 app_state.yesno_selected = !app_state.yesno_selected;
